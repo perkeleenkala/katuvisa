@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="fi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Katuvisa – street name quiz</title>
+<title>Katuvisa – kadunnimivisa</title>
 <link rel="stylesheet" href="leaflet/leaflet.css">
 <style>
   :root {
@@ -85,43 +85,43 @@
   <!-- Setup -->
   <section id="setup">
     <h1>Katuvisa</h1>
-    <p class="muted">Learn street names from the map.</p>
+    <p class="muted">Opettele kadunnimet kartalta.</p>
 
-    <h2>Where would you like to quiz?</h2>
+    <h2>Missä haluat visailla?</h2>
     <ul class="list" id="areas"></ul>
 
-    <h2>Districts</h2>
-    <button id="listDistricts" type="button">List districts in the map view</button>
+    <h2>Kaupunginosat</h2>
+    <button id="listDistricts" type="button">Listaa kartalla näkyvät kaupunginosat</button>
     <div id="dStatus" class="muted" style="margin-top:6px"></div>
     <ul class="list" id="districts" style="margin-top:8px;max-height:230px;overflow-y:auto"></ul>
 
-    <h2>Or find a new area</h2>
+    <h2>Tai etsi uusi alue</h2>
     <form class="row" id="searchForm">
-      <input type="text" id="searchBox" placeholder="City or district, e.g. Tapiola" autocomplete="off">
-      <button type="submit">Search</button>
+      <input type="text" id="searchBox" placeholder="Paikka, esim. Tapiola" autocomplete="off">
+      <button type="submit">Hae</button>
     </form>
     <ul class="list" id="results" style="margin-top:8px"></ul>
-    <p class="muted">The blue shape on the map is the quiz area. Drag a corner to reshape it, drag a small dot on an edge to add a corner, double-click a corner to remove it, and drag the round handle to move the whole area.</p>
+    <p class="muted">Kartan sininen kuvio on visa-alue. Muuta sen muotoa vetämällä kulmaa, lisää kulma vetämällä reunan pientä pistettä, poista kulma kaksoisnapsauttamalla sitä ja siirrä koko aluetta vetämällä pyöreää kahvaa.</p>
     <div class="row">
-      <button id="boxToView" type="button">Reset to rectangle</button>
-      <button id="saveArea" type="button">Save this area…</button>
+      <button id="boxToView" type="button">Nollaa muoto</button>
+      <button id="saveArea" type="button">Tallenna alue…</button>
     </div>
 
-    <h2>Streets</h2>
+    <h2>Kadut</h2>
     <div class="seg" id="level">
-      <label><input type="radio" name="level" value="1">Main roads</label>
-      <label><input type="radio" name="level" value="2" checked>+ Collectors</label>
-      <label><input type="radio" name="level" value="3">All streets</label>
+      <label><input type="radio" name="level" value="1">Päätiet</label>
+      <label><input type="radio" name="level" value="2" checked>+ Isot kadut</label>
+      <label><input type="radio" name="level" value="3">Kaikki kadut</label>
     </div>
 
-    <h2>Answer by</h2>
+    <h2>Vastaustapa</h2>
     <div class="seg" id="mode">
-      <label><input type="radio" name="mode" value="type" checked>Typing</label>
-      <label><input type="radio" name="mode" value="choice">Multiple choice</label>
+      <label><input type="radio" name="mode" value="type" checked>Kirjoittamalla</label>
+      <label><input type="radio" name="mode" value="choice">Monivalinta</label>
     </div>
 
     <p class="muted" id="bestLine" style="margin-top:14px"></p>
-    <button class="primary big" id="start" type="button">Start quiz</button>
+    <button class="primary big" id="start" type="button">Aloita visa</button>
     <div id="status"></div>
   </section>
 
@@ -129,50 +129,50 @@
   <section id="quiz" class="hidden">
     <div class="row" style="align-items:center">
       <h1 id="quizTitle" style="flex:1;font-size:18px"></h1>
-      <button id="quit" type="button">End quiz</button>
+      <button id="quit" type="button">Lopeta</button>
     </div>
     <div class="stats">
-      <div class="stat"><b id="sScore">0</b><span>points</span></div>
-      <div class="stat"><b id="sDone">0</b><span>answered</span></div>
-      <div class="stat"><b id="sLeft">0</b><span>left</span></div>
+      <div class="stat"><b id="sScore">0</b><span>pistettä</span></div>
+      <div class="stat"><b id="sDone">0</b><span>vastattu</span></div>
+      <div class="stat"><b id="sLeft">0</b><span>jäljellä</span></div>
     </div>
     <div class="bar"><i id="progress"></i></div>
 
-    <div id="question">What is the highlighted street called?</div>
+    <div id="question">Mikä on korostetun kadun nimi?</div>
 
     <form id="typeForm" class="row">
-      <input type="text" id="answer" placeholder="Street name in Finnish" autocomplete="off" autocapitalize="words" spellcheck="false">
+      <input type="text" id="answer" placeholder="Kadun nimi suomeksi" autocomplete="off" autocapitalize="words" spellcheck="false">
       <button class="primary" type="submit">OK</button>
     </form>
     <div id="choices"></div>
 
     <div id="feedback" class="hidden"></div>
     <div class="row">
-      <button id="skip" type="button">I don't know</button>
-      <button id="recenter" type="button">Show street again</button>
-      <button id="next" type="button" class="primary hidden" style="flex:1">Next street ⏎</button>
+      <button id="skip" type="button">En tiedä</button>
+      <button id="recenter" type="button">Näytä katu uudelleen</button>
+      <button id="next" type="button" class="primary hidden" style="flex:1">Seuraava katu ⏎</button>
     </div>
   </section>
 
   <!-- Result -->
   <section id="result" class="hidden">
-    <h1>Round finished</h1>
+    <h1>Kierros päättyi</h1>
     <p class="muted" id="resArea"></p>
     <div class="stats">
-      <div class="stat"><b id="rPct">0%</b><span>score</span></div>
-      <div class="stat"><b id="rFirst">0</b><span>first try</span></div>
-      <div class="stat"><b id="rSecond">0</b><span>second try</span></div>
-      <div class="stat"><b id="rMiss">0</b><span>missed</span></div>
+      <div class="stat"><b id="rPct">0 %</b><span>tulos</span></div>
+      <div class="stat"><b id="rFirst">0</b><span>1. yrityksellä</span></div>
+      <div class="stat"><b id="rSecond">0</b><span>2. yrityksellä</span></div>
+      <div class="stat"><b id="rMiss">0</b><span>väärin</span></div>
     </div>
     <p id="rBest"></p>
     <div id="missedWrap">
-      <h2>Streets to practise</h2>
-      <p class="muted">Hover or tap a red street on the map to see its name.</p>
+      <h2>Harjoiteltavat kadut</h2>
+      <p class="muted">Vie hiiri punaisen kadun päälle tai napauta sitä kartalla, niin näet sen nimen.</p>
       <ul class="list" id="missed"></ul>
     </div>
     <div class="row" style="margin-top:14px">
-      <button class="primary" id="again" type="button" style="flex:1">Play again</button>
-      <button id="newArea" type="button" style="flex:1">Choose area</button>
+      <button class="primary" id="again" type="button" style="flex:1">Pelaa uudelleen</button>
+      <button id="newArea" type="button" style="flex:1">Valitse alue</button>
     </div>
   </section>
 </div>
@@ -185,11 +185,11 @@
 
 /* ---------- Settings ---------- */
 const PRESETS = [
-  { name: "Helsinki Centre", bbox: [60.155, 24.915, 60.180, 24.965] },
-  { name: "Western Espoo",   bbox: [60.135, 24.560, 60.225, 24.700] },
-  { name: "Lohja Centre",    bbox: [60.235, 24.030, 60.265, 24.100] },
+  { name: "Helsingin keskusta", bbox: [60.155, 24.915, 60.180, 24.965] },
+  { name: "Länsi-Espoo", bbox: [60.135, 24.560, 60.225, 24.700] },
+  { name: "Lohjan keskusta", bbox: [60.235, 24.030, 60.265, 24.100] },
 ];
-const LEVELS = { 1: "Main roads", 2: "Main roads + collectors", 3: "All streets" };
+const LEVELS = { 1: "Päätiet", 2: "Päätiet + isot kadut", 3: "Kaikki kadut" };
 const RANK = {   // road type -> the easiest level it belongs to
   motorway: 1, trunk: 1, primary: 1, secondary: 1, motorway_link: 1, trunk_link: 1, primary_link: 1, secondary_link: 1,
   tertiary: 2, tertiary_link: 2,
@@ -210,7 +210,7 @@ const store = {
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const fmt = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
+const fmt = n => Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ",");
 function dist(a, b) { // metres
   const R = 6371000, r = Math.PI / 180;
   const dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
@@ -234,12 +234,14 @@ function lev(a, b) {
 
 /* ---------- Map ---------- */
 const map = L.map("map", { zoomSnap: 0.25, preferCanvas: true }).setView([60.17, 24.94], 12);
-const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>in tekijät';
 // Setup screen: normal map with names. Quiz: aerial photo (no names) with the road network drawn on top.
 const tilesLabels = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: osmAttr, maxZoom: 19 });
 const tilesPlain  = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { attribution: "Roads " + osmAttr + " · Imagery &copy; Esri, Maxar, Earthstar Geographics", maxNativeZoom: 18, maxZoom: 19, opacity: 0.6 });
+  { attribution: "Tiet " + osmAttr + " · Ilmakuvat &copy; Esri, Maxar, Earthstar Geographics", maxNativeZoom: 18, maxZoom: 19, opacity: 0.6 });
 tilesLabels.addTo(map);
+map.zoomControl.remove();
+L.control.zoom({ zoomInTitle: "Lähennä", zoomOutTitle: "Loitonna" }).addTo(map);
 function setLabels(on) {
   map.removeLayer(on ? tilesPlain : tilesLabels);
   (on ? tilesLabels : tilesPlain).addTo(map);
@@ -267,13 +269,13 @@ function buildHandles() {
   handleLayer.clearLayers();
   if (!editing) return;
   poly.forEach((p, i) => {
-    const m = L.marker(p, { draggable: true, icon: handleIcon(""), zIndexOffset: 500, title: "Drag to reshape · double-click to remove" }).addTo(handleLayer);
+    const m = L.marker(p, { draggable: true, icon: handleIcon(""), zIndexOffset: 500, title: "Muuta muotoa vetämällä · poista kaksoisnapsauttamalla" }).addTo(handleLayer);
     m.on("drag", () => { const q = m.getLatLng(); poly[i] = [q.lat, q.lng]; shape.setLatLngs(poly); });
     m.on("dragend", polyChanged);
     m.on("dblclick contextmenu", () => { if (poly.length > 3) { poly.splice(i, 1); polyChanged(); } });
     // small dot in the middle of each edge: dragging it adds a new corner there
     const n = poly[(i + 1) % poly.length];
-    const mid = L.marker([(p[0] + n[0]) / 2, (p[1] + n[1]) / 2], { draggable: true, icon: handleIcon("mid"), zIndexOffset: 450, title: "Drag to add a corner" }).addTo(handleLayer);
+    const mid = L.marker([(p[0] + n[0]) / 2, (p[1] + n[1]) / 2], { draggable: true, icon: handleIcon("mid"), zIndexOffset: 450, title: "Lisää kulma vetämällä" }).addTo(handleLayer);
     let inserted = false;
     mid.on("drag", () => {
       const q = mid.getLatLng();
@@ -283,7 +285,7 @@ function buildHandles() {
     mid.on("dragend", polyChanged);
   });
   const c = [poly.reduce((a, p) => a + p[0], 0) / poly.length, poly.reduce((a, p) => a + p[1], 0) / poly.length];
-  const mover = L.marker(c, { draggable: true, icon: handleIcon("move"), zIndexOffset: 400, title: "Drag to move the area" }).addTo(handleLayer);
+  const mover = L.marker(c, { draggable: true, icon: handleIcon("move"), zIndexOffset: 400, title: "Siirrä aluetta vetämällä" }).addTo(handleLayer);
   let from, orig;
   mover.on("dragstart", () => { from = mover.getLatLng(); orig = poly.map(p => p.slice()); });
   mover.on("drag", () => { const q = mover.getLatLng(); poly = orig.map(p => [p[0] + q.lat - from.lat, p[1] + q.lng - from.lng]); shape.setLatLngs(poly); });
@@ -310,18 +312,18 @@ const scoreKey = () => `${polyKey(poly)}|${level()}|${mode()}`;
 let pickedName = null, pickedKey = null;      // name of a district / search result, valid while its shape is unedited
 function setNamedPoly(name, pts) { setPoly(pts, true); pickedName = name; pickedKey = polyKey(poly); $("searchBox").value = name; }
 const currentAreaName = () => (allAreas().find(a => polyKey(areaPoly(a)) === polyKey(poly)) || {}).name
-  || (pickedKey === polyKey(poly) ? pickedName : "Custom area");
+  || (pickedKey === polyKey(poly) ? pickedName : "Oma alue");
 
 function renderAreas() {
   const key = polyKey(poly);
   $("areas").innerHTML = allAreas().map((a, i) =>
     `<li data-i="${i}" class="${polyKey(areaPoly(a)) === key ? "sel" : ""}"><span class="name">${esc(a.name)}</span>` +
-    (a.preset ? "" : `<button class="del" data-del="${i}" title="Remove saved area" aria-label="Remove ${esc(a.name)}">×</button>`) + `</li>`).join("");
+    (a.preset ? "" : `<button class="del" data-del="${i}" title="Poista tallennettu alue" aria-label="Poista ${esc(a.name)}">×</button>`) + `</li>`).join("");
 }
 function refreshSetup() {
   renderAreas();
   const best = store.get("best", {})[scoreKey()];
-  $("bestLine").textContent = `Area ${polyKm2(poly).toFixed(1)} km² · ${poly.length} corners` + (best != null ? ` · your best here: ${best}%` : "");
+  $("bestLine").textContent = `Pinta-ala ${polyKm2(poly).toFixed(1).replace(".", ",")} km² · ${poly.length} kulmaa` + (best != null ? ` · paras tuloksesi täällä: ${best} %` : "");
   setStatus("");
 }
 function setStatus(msg, err) { $("status").textContent = msg; $("status").className = err ? "err" : ""; }
@@ -331,7 +333,7 @@ $("areas").addEventListener("click", e => {
   const areas = allAreas();
   if (del) {
     const a = areas[+del.dataset.del];
-    if (confirm(`Remove saved area "${a.name}"?`)) {
+    if (confirm(`Poistetaanko tallennettu alue ”${a.name}”?`)) {
       customAreas = customAreas.filter(c => c.name !== a.name);
       store.set("areas", customAreas);
       refreshSetup();
@@ -342,7 +344,7 @@ $("areas").addEventListener("click", e => {
   if (li) setPoly(areaPoly(areas[+li.dataset.i]), true);
 });
 $("saveArea").addEventListener("click", () => {
-  const name = (prompt("Name for this area:", $("searchBox").value.trim()) || "").trim();
+  const name = (prompt("Alueen nimi:", $("searchBox").value.trim()) || "").trim();
   if (!name) return;
   customAreas = customAreas.filter(a => a.name !== name);
   customAreas.push({ name, poly: poly.map(p => p.slice()) });
@@ -361,20 +363,29 @@ $("searchForm").addEventListener("submit", async e => {
   e.preventDefault();
   const q = $("searchBox").value.trim();
   if (!q) return;
-  setStatus("Searching…");
+  setStatus("Haetaan…");
   $("results").innerHTML = "";
   try {
-    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=fi&accept-language=fi&polygon_geojson=1&polygon_threshold=0.0008&q=" + encodeURIComponent(q));
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=12&addressdetails=1&countrycodes=fi&accept-language=fi&polygon_geojson=1&polygon_threshold=0.0008&viewbox=" + map.getBounds().pad(1).toBBoxString() + "&q=" + encodeURIComponent(q));   // viewbox: places near the current map view come first
     if (!r.ok) throw new Error(r.status);
-    searchResults = await r.json();
-    setStatus(searchResults.length ? "" : "No places found.", !searchResults.length);
+    // the same place often comes back several times (as a point, an outline, a square…): keep one, preferring one with an outline
+    searchResults = [];
+    for (const p of await r.json()) {
+      const name = p.display_name.split(", ")[0];
+      const dup = searchResults.findIndex(o => o.display_name.split(", ")[0] === name && dist([+o.lat, +o.lon], [+p.lat, +p.lon]) < 3000);
+      if (dup < 0) searchResults.push(p);
+      else if (!outlineOf(searchResults[dup]) && outlineOf(p)) searchResults[dup] = p;
+    }
+    searchResults = searchResults.slice(0, 6);
+    setStatus(searchResults.length ? "" : "Paikkoja ei löytynyt.", !searchResults.length);
     $("results").innerHTML = searchResults.map((p, i) => {
-      const parts = p.display_name.split(", ");
-      return `<li data-i="${i}"><span class="name">${esc(parts[0])} <small>${esc(parts.slice(1, 4).join(", "))}</small></span></li>`;
+      const parts = p.display_name.split(", "), a = p.address || {};
+      const where = a.city || a.town || a.municipality || a.village || parts.slice(1, 3).join(", ");
+      return `<li data-i="${i}"><span class="name">${esc(parts[0])} <small>${esc(where === parts[0] ? (a.county || a.state || "") : where)}</small></span></li>`;
     }).join("");
     if (searchResults.length === 1) pickResult(0);
   } catch (err) {
-    setStatus("Place search failed. Check your internet connection.", true);
+    setStatus("Paikkahaku epäonnistui. Tarkista verkkoyhteys.", true);
   }
 });
 $("results").addEventListener("click", e => { const li = e.target.closest("li"); if (li) pickResult(+li.dataset.i); });
@@ -408,8 +419,8 @@ let districtList = [];
 function setDStatus(msg, err) { $("dStatus").textContent = msg; $("dStatus").style.color = err ? "var(--bad)" : ""; }
 $("listDistricts").addEventListener("click", async () => {
   const b = map.getBounds(), bb = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
-  if (bboxKm2(bb) > 3000) return setDStatus("Zoom in a bit first – the map view is too large to list districts.", true);
-  setDStatus("Looking up districts…");
+  if (bboxKm2(bb) > 3000) return setDStatus("Lähennä karttaa ensin – näkymä on liian laaja kaupunginosien listaamiseen.", true);
+  setDStatus("Haetaan kaupunginosia…");
   $("listDistricts").disabled = true;
   try {
     const data = await fetchOverpass(`[out:json][timeout:60];node["place"~"^(suburb|quarter|neighbourhood)$"]["name"](${bb.map(x => x.toFixed(5)).join(",")});out;`);
@@ -419,9 +430,9 @@ $("listDistricts").addEventListener("click", async () => {
       .filter(d => d.name && !seen.has(d.name) && seen.add(d.name))
       .sort((x, y) => x.name.localeCompare(y.name, "fi"));
     $("districts").innerHTML = districtList.map((d, i) => `<li data-i="${i}"><span class="name">${esc(d.name)}</span></li>`).join("");
-    setDStatus(districtList.length ? "" : "No districts found in this map view.", !districtList.length);
+    setDStatus(districtList.length ? "" : "Tästä karttanäkymästä ei löytynyt kaupunginosia.", !districtList.length);
   } catch (err) {
-    setDStatus("Could not load districts. The map server may be busy – try again in a moment.", true);
+    setDStatus("Kaupunginosien lataus epäonnistui. Karttapalvelin voi olla ruuhkautunut – yritä hetken kuluttua uudelleen.", true);
   }
   $("listDistricts").disabled = false;
 });
@@ -429,7 +440,7 @@ $("districts").addEventListener("click", async e => {
   const li = e.target.closest("li");
   if (!li) return;
   const d = districtList[+li.dataset.i];
-  setDStatus("Fetching the outline of " + d.name + "…");
+  setDStatus("Haetaan rajoja: " + d.name + "…");
   let pts = null;
   try {
     const vb = [d.lon - 0.08, d.lat + 0.04, d.lon + 0.08, d.lat - 0.04].join(",");
@@ -440,7 +451,7 @@ $("districts").addEventListener("click", async e => {
     }
   } catch (err) {}
   setNamedPoly(d.name, pts || boxAround(d.lat, d.lon, d.big ? 1 : 0.6));
-  setDStatus(pts ? "" : `No outline is mapped for ${d.name}, so a box around its centre is used. Adjust it as you like.`);
+  setDStatus(pts ? "" : `Kaupunginosalle ${d.name} ei ole kartoitettu rajoja, joten käytössä on sen keskipisteen ympärille piirretty suorakulmio. Muokkaa sitä haluamallasi tavalla.`);
 });
 
 /* ---------- Street data (Overpass), kept in the browser so an area loads instantly next time ---------- */
@@ -595,15 +606,15 @@ let Q = null;   // quiz state
 
 $("start").addEventListener("click", startQuiz);
 async function startQuiz() {
-  if (polyKm2(poly) > MAX_AREA_KM2 || bboxKm2(polyBbox(poly)) > 3 * MAX_AREA_KM2) return setStatus(`That area is too large (max ${MAX_AREA_KM2} km²). Make it smaller.`, true);
+  if (polyKm2(poly) > MAX_AREA_KM2 || bboxKm2(polyBbox(poly)) > 3 * MAX_AREA_KM2) return setStatus(`Alue on liian suuri (enintään ${MAX_AREA_KM2} km²). Pienennä sitä.`, true);
   $("start").disabled = true;
-  setStatus("Loading streets from OpenStreetMap… the first time for an area this can take up to a minute.");
+  setStatus("Ladataan katuja OpenStreetMapista… Alueen ensimmäinen lataus voi kestää jopa minuutin.");
   let area;
   try { area = await loadArea(poly); }
-  catch (err) { $("start").disabled = false; return setStatus("Could not load street data. The map server may be busy – try again in a moment.", true); }
+  catch (err) { $("start").disabled = false; return setStatus("Katutietojen lataus epäonnistui. Karttapalvelin voi olla ruuhkautunut – yritä hetken kuluttua uudelleen.", true); }
   $("start").disabled = false;
   const lvl = level(), streets = area.streets.filter(s => s.rank <= lvl);
-  if (!streets.length) return setStatus("No named streets of that kind in this area. Try a larger area or more street types.", true);
+  if (!streets.length) return setStatus("Alueella ei ole tämäntyyppisiä nimettyjä katuja. Kokeile suurempaa aluetta tai useampia katutyyppejä.", true);
 
   Q = {
     streets, queue: shuffle(streets.slice()), idx: -1, mode: mode(), key: scoreKey(),
@@ -692,24 +703,24 @@ function answered(correct, note) {
     const pts = Q.attempt === 0 ? 1 : 0.5;
     Q.points += pts; Q.attempt === 0 ? Q.first++ : Q.second++;
     settle(s, Q.attempt === 0 ? "good" : "mid",
-      `${Q.attempt === 0 ? "Correct!" : "Correct on the second try (½ point)."} <b>${esc(s.name)}</b>${note ? `<br><span class="muted">${note}</span>` : ""}`);
+      `${Q.attempt === 0 ? "Oikein!" : "Oikein toisella yrityksellä (½ pistettä)."} <b>${esc(s.name)}</b>${note ? `<br><span class="muted">${note}</span>` : ""}`);
     Q.timer = setTimeout(nextStreet, note ? 2200 : 1100);
   } else if (Q.attempt === 0) {
     Q.attempt = 1;
     if (Q.mode === "type") {
       const pattern = s.name.replace(/[^\s\-]/g, (c, i) => i === 0 ? c : "_");
-      feedback("mid", `Not quite – one more try. Hint:<br><span class="hint">${esc(pattern)}</span>`);
+      feedback("mid", `Ei aivan – yritä vielä kerran. Vihje:<br><span class="hint">${esc(pattern)}</span>`);
       $("answer").select();
     } else {
-      feedback("mid", "Not quite – one more try. One wrong option has been removed.");
+      feedback("mid", "Ei aivan – yritä vielä kerran. Yksi väärä vaihtoehto on poistettu.");
     }
   } else {
-    reveal(s, "Wrong again.");
+    reveal(s, "Väärin taas.");
   }
 }
 function reveal(s, lead) {
   Q.missed.push(s);
-  settle(s, "bad", `${lead} The street is <b>${esc(s.name)}</b>`);
+  settle(s, "bad", `${lead} Katu on <b>${esc(s.name)}</b>`);
 }
 function settle(s, cls, html) {
   Q.locked = true;
@@ -731,7 +742,7 @@ $("typeForm").addEventListener("submit", e => {
   if (!Q || Q.locked) return;
   const s = Q.queue[Q.idx], verdict = judge($("answer").value, s);
   if (!verdict) return;
-  answered(verdict !== "wrong", verdict === "close" ? "Accepted with a small spelling slip – check the exact spelling above." : "");
+  answered(verdict !== "wrong", verdict === "close" ? "Hyväksytty pienestä kirjoitusvirheestä huolimatta – tarkista oikea kirjoitusasu yltä." : "");
 });
 $("choices").addEventListener("click", e => {
   const btn = e.target.closest("button");
@@ -745,12 +756,12 @@ $("choices").addEventListener("click", e => {
   }
   answered(false);
 });
-$("skip").addEventListener("click", () => { if (Q && !Q.locked) reveal(Q.queue[Q.idx], "No problem."); });
+$("skip").addEventListener("click", () => { if (Q && !Q.locked) reveal(Q.queue[Q.idx], "Ei se mitään."); });
 $("next").addEventListener("click", nextStreet);
 $("recenter").addEventListener("click", () => { if (Q) focusStreet(); });
 $("quit").addEventListener("click", () => {
   if (!Q) return;
-  if (Q.idx + (Q.locked ? 1 : 0) === 0 || confirm("End this round now? Your score so far is shown, but it won't count as a best score.")) finish(true);
+  if (Q.idx + (Q.locked ? 1 : 0) === 0 || confirm("Lopetetaanko kierros nyt? Tähänastinen tuloksesi näytetään, mutta sitä ei lasketa parhaaksi tulokseksi.")) finish(true);
 });
 document.addEventListener("keydown", e => {
   if (!Q || $("quiz").classList.contains("hidden")) return;
@@ -767,13 +778,13 @@ function finish(early) {
   hlLayer.clearLayers();
   const asked = Q.first + Q.second + Q.missed.length;
   const pct = asked ? Math.round(100 * Q.points / asked) : 0;
-  $("resArea").textContent = `${Q.area} · ${Q.levelLabel} · ${Q.mode === "type" ? "typing" : "multiple choice"} · ${asked} of ${Q.queue.length} streets`;
-  $("rPct").textContent = pct + "%";
+  $("resArea").textContent = `${Q.area} · ${Q.levelLabel} · ${Q.mode === "type" ? "kirjoittamalla" : "monivalinta"} · ${asked}/${Q.queue.length} katua`;
+  $("rPct").textContent = pct + " %";
   $("rFirst").textContent = Q.first; $("rSecond").textContent = Q.second; $("rMiss").textContent = Q.missed.length;
   const best = store.get("best", {}), old = best[Q.key];
-  if (early) $("rBest").textContent = old != null ? `Round ended early. Your best here is ${old}%.` : "Round ended early.";
-  else if (old == null || pct > old) { best[Q.key] = pct; store.set("best", best); $("rBest").textContent = old == null ? "First completed round here – that's your score to beat." : `New best! Previous best was ${old}%.`; }
-  else $("rBest").textContent = `Your best here is ${old}%.`;
+  if (early) $("rBest").textContent = old != null ? `Kierros lopetettiin kesken. Paras tuloksesi täällä on ${old} %.` : "Kierros lopetettiin kesken.";
+  else if (old == null || pct > old) { best[Q.key] = pct; store.set("best", best); $("rBest").textContent = old == null ? "Ensimmäinen kokonainen kierros täällä – tämä on tulos, joka sinun pitää päihittää." : `Uusi ennätys! Aiempi paras oli ${old} %.`; }
+  else $("rBest").textContent = `Paras tuloksesi täällä on ${old} %.`;
   $("missedWrap").classList.toggle("hidden", !Q.missed.length);
   $("missed").innerHTML = Q.missed.map(s => `<li><span class="name">${esc(s.name)}</span></li>`).join("");
   show("result");
