@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Katuvisa – street name quiz</title>
+<link rel="stylesheet" href="leaflet/leaflet.css">
+<style>
+  :root {
+    --bg: #f6f4ef; --panel: #ffffff; --ink: #1f2933; --muted: #6b7680; --line: #dcd8cf;
+    --accent: #0b6e99; --accent-ink: #ffffff; --good: #2e8540; --mid: #c77700; --bad: #c0392b;
+    --hl: #e6007e;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); display: flex; }
+  #panel { width: 360px; flex: none; background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 18px; }
+  #map { flex: 1; min-width: 0; background: #e8e6e0; }
+  h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 20px 0 8px; }
+  p { margin: 0 0 10px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .hidden { display: none !important; }
+  input[type=text] { width: 100%; padding: 9px 10px; font: inherit; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button { font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button.big { width: 100%; padding: 12px; font-size: 16px; }
+  .row { display: flex; gap: 8px; }
+  .row > input { flex: 1; }
+  ul.list { list-style: none; margin: 0; padding: 0; }
+  ul.list li { display: flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 5px; cursor: pointer; }
+  ul.list li:hover { border-color: var(--accent); }
+  ul.list li.sel { border-color: var(--accent); background: #e8f3f8; }
+  ul.list li span.name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  ul.list li small { color: var(--muted); }
+  ul.list li button.del { padding: 0 7px; border: none; background: none; color: var(--muted); font-size: 16px; }
+  ul.list li button.del:hover { color: var(--bad); }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg label { flex: 1; text-align: center; padding: 8px 4px; cursor: pointer; font-size: 14px; border-left: 1px solid var(--line); }
+  .seg label:first-child { border-left: none; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label:has(input:checked) { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .seg label:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: -2px; }
+  #status { margin-top: 10px; min-height: 20px; font-size: 13px; }
+  #status.err { color: var(--bad); }
+  .stats { display: flex; gap: 8px; margin: 12px 0; }
+  .stat { flex: 1; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+  .stat b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s; }
+  #question { font-size: 17px; font-weight: 600; margin: 18px 0 10px; }
+  #choices button { display: block; width: 100%; text-align: left; margin-bottom: 6px; padding: 11px 12px; }
+  #choices button kbd { color: var(--muted); font: inherit; margin-right: 8px; }
+  #choices button.wrong { border-color: var(--bad); color: var(--bad); text-decoration: line-through; }
+  #choices button.right { border-color: var(--good); background: #e6f4e9; color: var(--good); font-weight: 600; }
+  #feedback { margin: 12px 0; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--line); }
+  #feedback.good { border-color: var(--good); background: #e6f4e9; }
+  #feedback.mid { border-color: var(--mid); background: #fdf3e1; }
+  #feedback.bad { border-color: var(--bad); background: #fbeae8; }
+  #feedback b { font-size: 17px; }
+  .hint { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .12em; font-size: 16px; }
+  #missed li { cursor: default; }
+  .handle { width: 14px; height: 14px; background: #fff; border: 2px solid var(--accent); border-radius: 2px; }
+  .handle.move { border-radius: 50%; width: 22px; height: 22px; background: var(--accent); border-color: #fff; cursor: move; box-shadow: 0 0 0 1px var(--accent); }
+  .handle.mid { width: 10px; height: 10px; border-radius: 50%; opacity: .75; }
+  .maplabel { pointer-events: none; }
+  .maplabel span { position: absolute; left: 0; top: 0; white-space: nowrap; transform-origin: center; font: 600 12px/1 system-ui, sans-serif; color: #fff;
+    text-shadow: 0 0 2px #000, 0 0 2px #000, 0 0 4px #000, 0 0 6px rgba(0,0,0,.8); }
+  .maplabel.district span { font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #fff7d6; }
+  .maplabel.district.major span { font-size: 16px; }
+  #map.far .maplabel.street, #map.vfar .maplabel.district.minor { display: none; }
+  @media (max-width: 760px) {
+    body { flex-direction: column-reverse; }
+    #panel { width: 100%; max-height: 55%; border-right: none; border-top: 1px solid var(--line); padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <!-- Setup -->
+  <section id="setup">
+    <h1>Katuvisa</h1>
+    <p class="muted">Learn street names from the map.</p>
+
+    <h2>Where would you like to quiz?</h2>
+    <ul class="list" id="areas"></ul>
+
+    <h2>Districts</h2>
+    <button id="listDistricts" type="button">List districts in the map view</button>
+    <div id="dStatus" class="muted" style="margin-top:6px"></div>
+    <ul class="list" id="districts" style="margin-top:8px;max-height:230px;overflow-y:auto"></ul>
+
+    <h2>Or find a new area</h2>
+    <form class="row" id="searchForm">
+      <input type="text" id="searchBox" placeholder="City or district, e.g. Tapiola" autocomplete="off">
+      <button type="submit">Search</button>
+    </form>
+    <ul class="list" id="results" style="margin-top:8px"></ul>
+    <p class="muted">The blue shape on the map is the quiz area. Drag a corner to reshape it, drag a small dot on an edge to add a corner, double-click a corner to remove it, and drag the round handle to move the whole area.</p>
+    <div class="row">
+      <button id="boxToView" type="button">Reset to rectangle</button>
+      <button id="saveArea" type="button">Save this area…</button>
+    </div>
+
+    <h2>Streets</h2>
+    <div class="seg" id="level">
+      <label><input type="radio" name="level" value="1">Main roads</label>
+      <label><input type="radio" name="level" value="2" checked>+ Collectors</label>
+      <label><input type="radio" name="level" value="3">All streets</label>
+    </div>
+
+    <h2>Answer by</h2>
+    <div class="seg" id="mode">
+      <label><input type="radio" name="mode" value="type" checked>Typing</label>
+      <label><input type="radio" name="mode" value="choice">Multiple choice</label>
+    </div>
+
+    <p class="muted" id="bestLine" style="margin-top:14px"></p>
+    <button class="primary big" id="start" type="button">Start quiz</button>
+    <div id="status"></div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz" class="hidden">
+    <div class="row" style="align-items:center">
+      <h1 id="quizTitle" style="flex:1;font-size:18px"></h1>
+      <button id="quit" type="button">End quiz</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sScore">0</b><span>points</span></div>
+      <div class="stat"><b id="sDone">0</b><span>answered</span></div>
+      <div class="stat"><b id="sLeft">0</b><span>left</span></div>
+    </div>
+    <div class="bar"><i id="progress"></i></div>
+
+    <div id="question">What is the highlighted street called?</div>
+
+    <form id="typeForm" class="row">
+      <input type="text" id="answer" placeholder="Street name in Finnish" autocomplete="off" autocapitalize="words" spellcheck="false">
+      <button class="primary" type="submit">OK</button>
+    </form>
+    <div id="choices"></div>
+
+    <div id="feedback" class="hidden"></div>
+    <div class="row">
+      <button id="skip" type="button">I don't know</button>
+      <button id="recenter" type="button">Show street again</button>
+      <button id="next" type="button" class="primary hidden" style="flex:1">Next street ⏎</button>
+    </div>
+  </section>
+
+  <!-- Result -->
+  <section id="result" class="hidden">
+    <h1>Round finished</h1>
+    <p class="muted" id="resArea"></p>
+    <div class="stats">
+      <div class="stat"><b id="rPct">0%</b><span>score</span></div>
+      <div class="stat"><b id="rFirst">0</b><span>first try</span></div>
+      <div class="stat"><b id="rSecond">0</b><span>second try</span></div>
+      <div class="stat"><b id="rMiss">0</b><span>missed</span></div>
+    </div>
+    <p id="rBest"></p>
+    <div id="missedWrap">
+      <h2>Streets to practise</h2>
+      <p class="muted">Hover or tap a red street on the map to see its name.</p>
+      <ul class="list" id="missed"></ul>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary" id="again" type="button" style="flex:1">Play again</button>
+      <button id="newArea" type="button" style="flex:1">Choose area</button>
+    </div>
+  </section>
+</div>
+
+<div id="map"></div>
+
+<script src="leaflet/leaflet.js"></script>
+<script>
+"use strict";
+
+/* ---------- Settings ---------- */
+const PRESETS = [
+  { name: "Helsinki Centre", bbox: [60.155, 24.915, 60.180, 24.965] },
+  { name: "Western Espoo",   bbox: [60.135, 24.560, 60.225, 24.700] },
+  { name: "Lohja Centre",    bbox: [60.235, 24.030, 60.265, 24.100] },
+];
+const LEVELS = { 1: "Main roads", 2: "Main roads + collectors", 3: "All streets" };
+const RANK = {   // road type -> the easiest level it belongs to
+  motorway: 1, trunk: 1, primary: 1, secondary: 1, motorway_link: 1, trunk_link: 1, primary_link: 1, secondary_link: 1,
+  tertiary: 2, tertiary_link: 2,
+  unclassified: 3, residential: 3, living_street: 3, pedestrian: 3,
+};
+const OVERPASS = [
+  { url: "https://overpass-api.de/api/interpreter", timeout: 90000 },
+  { url: "https://overpass.private.coffee/api/interpreter", timeout: 60000 },
+];
+const MAX_AREA_KM2 = 150;
+const MIN_STREET_M = 40;
+
+/* ---------- Small helpers ---------- */
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("katuvisa." + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("katuvisa." + k, JSON.stringify(v)); } catch {} },
+};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fmt = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
+function dist(a, b) { // metres
+  const R = 6371000, r = Math.PI / 180;
+  const dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function bboxKm2(b) { return dist([b[0], b[1]], [b[2], b[1]]) * dist([b[0], b[1]], [b[0], b[3]]) / 1e6; }
+const bboxKey = b => b.map(x => x.toFixed(4)).join(",");
+const norm = s => s.toLowerCase().normalize("NFC").replace(/[\s\-’'.]/g, "");
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+/* ---------- Map ---------- */
+const map = L.map("map", { zoomSnap: 0.25, preferCanvas: true }).setView([60.17, 24.94], 12);
+const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// Setup screen: normal map with names. Quiz: aerial photo (no names) with the road network drawn on top.
+const tilesLabels = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: osmAttr, maxZoom: 19 });
+const tilesPlain  = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { attribution: "Roads " + osmAttr + " · Imagery &copy; Esri, Maxar, Earthstar Geographics", maxNativeZoom: 18, maxZoom: 19, opacity: 0.6 });
+tilesLabels.addTo(map);
+function setLabels(on) {
+  map.removeLayer(on ? tilesPlain : tilesLabels);
+  (on ? tilesLabels : tilesPlain).addTo(map);
+}
+
+/* ---------- Area shape (setup screen): a polygon with any number of corners ---------- */
+const rectPoly = b => [[b[0], b[1]], [b[0], b[3]], [b[2], b[3]], [b[2], b[1]]];   // from [south, west, north, east]
+const areaPoly = a => a.poly || rectPoly(a.bbox);
+const polyKey = p => p.map(q => q[0].toFixed(4) + "," + q[1].toFixed(4)).join(";");
+const polyBbox = p => [Math.min(...p.map(q => q[0])), Math.min(...p.map(q => q[1])), Math.max(...p.map(q => q[0])), Math.max(...p.map(q => q[1]))];
+function polyKm2(p) {
+  const kx = 111.32 * Math.cos(p[0][0] * Math.PI / 180), ky = 110.57;
+  let a = 0;
+  for (let i = 0; i < p.length; i++) { const q = p[i], r = p[(i + 1) % p.length]; a += (q[1] * kx) * (r[0] * ky) - (r[1] * kx) * (q[0] * ky); }
+  return Math.abs(a) / 2;
+}
+let poly = areaPoly(PRESETS[0]).map(p => p.slice());
+let editing = true;
+const shape = L.polygon(poly, { color: "#0b6e99", weight: 2, fillOpacity: 0.08, interactive: false }).addTo(map);
+const handleLayer = L.layerGroup().addTo(map);
+const HANDLE_SIZE = { "": 14, move: 22, mid: 10 };
+const handleIcon = cls => L.divIcon({ className: "", html: `<div class="handle ${cls}"></div>`, iconSize: [HANDLE_SIZE[cls], HANDLE_SIZE[cls]] });
+
+function buildHandles() {
+  handleLayer.clearLayers();
+  if (!editing) return;
+  poly.forEach((p, i) => {
+    const m = L.marker(p, { draggable: true, icon: handleIcon(""), zIndexOffset: 500, title: "Drag to reshape · double-click to remove" }).addTo(handleLayer);
+    m.on("drag", () => { const q = m.getLatLng(); poly[i] = [q.lat, q.lng]; shape.setLatLngs(poly); });
+    m.on("dragend", polyChanged);
+    m.on("dblclick contextmenu", () => { if (poly.length > 3) { poly.splice(i, 1); polyChanged(); } });
+    // small dot in the middle of each edge: dragging it adds a new corner there
+    const n = poly[(i + 1) % poly.length];
+    const mid = L.marker([(p[0] + n[0]) / 2, (p[1] + n[1]) / 2], { draggable: true, icon: handleIcon("mid"), zIndexOffset: 450, title: "Drag to add a corner" }).addTo(handleLayer);
+    let inserted = false;
+    mid.on("drag", () => {
+      const q = mid.getLatLng();
+      if (inserted) poly[i + 1] = [q.lat, q.lng]; else { poly.splice(i + 1, 0, [q.lat, q.lng]); inserted = true; }
+      shape.setLatLngs(poly);
+    });
+    mid.on("dragend", polyChanged);
+  });
+  const c = [poly.reduce((a, p) => a + p[0], 0) / poly.length, poly.reduce((a, p) => a + p[1], 0) / poly.length];
+  const mover = L.marker(c, { draggable: true, icon: handleIcon("move"), zIndexOffset: 400, title: "Drag to move the area" }).addTo(handleLayer);
+  let from, orig;
+  mover.on("dragstart", () => { from = mover.getLatLng(); orig = poly.map(p => p.slice()); });
+  mover.on("drag", () => { const q = mover.getLatLng(); poly = orig.map(p => [p[0] + q.lat - from.lat, p[1] + q.lng - from.lng]); shape.setLatLngs(poly); });
+  mover.on("dragend", polyChanged);
+}
+function polyChanged() { shape.setLatLngs(poly); buildHandles(); refreshSetup(); }
+function setPoly(p, fit) {
+  poly = p.map(q => [q[0], q[1]]);
+  polyChanged();
+  if (fit) map.fitBounds(shape.getBounds(), { padding: [30, 30] });
+}
+function showBox(on) {
+  editing = on;
+  buildHandles();
+  shape.setStyle(on ? { dashArray: null, fillOpacity: 0.08 } : { dashArray: "6 6", fillOpacity: 0 });
+}
+
+/* ---------- Setup screen ---------- */
+let customAreas = store.get("areas", []).filter(a => a && a.name && (a.poly || a.bbox));
+const allAreas = () => [...PRESETS.map(a => ({ ...a, preset: true })), ...customAreas];
+const level = () => +document.querySelector("input[name=level]:checked").value;
+const mode = () => document.querySelector("input[name=mode]:checked").value;
+const scoreKey = () => `${polyKey(poly)}|${level()}|${mode()}`;
+let pickedName = null, pickedKey = null;      // name of a district / search result, valid while its shape is unedited
+function setNamedPoly(name, pts) { setPoly(pts, true); pickedName = name; pickedKey = polyKey(poly); $("searchBox").value = name; }
+const currentAreaName = () => (allAreas().find(a => polyKey(areaPoly(a)) === polyKey(poly)) || {}).name
+  || (pickedKey === polyKey(poly) ? pickedName : "Custom area");
+
+function renderAreas() {
+  const key = polyKey(poly);
+  $("areas").innerHTML = allAreas().map((a, i) =>
+    `<li data-i="${i}" class="${polyKey(areaPoly(a)) === key ? "sel" : ""}"><span class="name">${esc(a.name)}</span>` +
+    (a.preset ? "" : `<button class="del" data-del="${i}" title="Remove saved area" aria-label="Remove ${esc(a.name)}">×</button>`) + `</li>`).join("");
+}
+function refreshSetup() {
+  renderAreas();
+  const best = store.get("best", {})[scoreKey()];
+  $("bestLine").textContent = `Area ${polyKm2(poly).toFixed(1)} km² · ${poly.length} corners` + (best != null ? ` · your best here: ${best}%` : "");
+  setStatus("");
+}
+function setStatus(msg, err) { $("status").textContent = msg; $("status").className = err ? "err" : ""; }
+
+$("areas").addEventListener("click", e => {
+  const del = e.target.closest("[data-del]");
+  const areas = allAreas();
+  if (del) {
+    const a = areas[+del.dataset.del];
+    if (confirm(`Remove saved area "${a.name}"?`)) {
+      customAreas = customAreas.filter(c => c.name !== a.name);
+      store.set("areas", customAreas);
+      refreshSetup();
+    }
+    return;
+  }
+  const li = e.target.closest("li");
+  if (li) setPoly(areaPoly(areas[+li.dataset.i]), true);
+});
+$("saveArea").addEventListener("click", () => {
+  const name = (prompt("Name for this area:", $("searchBox").value.trim()) || "").trim();
+  if (!name) return;
+  customAreas = customAreas.filter(a => a.name !== name);
+  customAreas.push({ name, poly: poly.map(p => p.slice()) });
+  store.set("areas", customAreas);
+  refreshSetup();
+});
+$("boxToView").addEventListener("click", () => {
+  const b = map.getBounds().pad(-0.12);
+  setPoly(rectPoly([b.getSouth(), b.getWest(), b.getNorth(), b.getEast()]), false);
+});
+document.querySelectorAll("#level input, #mode input").forEach(i => i.addEventListener("change", refreshSetup));
+
+/* Place search (Nominatim). If the place has an outline (e.g. a district), that outline becomes the quiz area. */
+let searchResults = [];
+$("searchForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const q = $("searchBox").value.trim();
+  if (!q) return;
+  setStatus("Searching…");
+  $("results").innerHTML = "";
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=fi&accept-language=fi&polygon_geojson=1&polygon_threshold=0.0008&q=" + encodeURIComponent(q));
+    if (!r.ok) throw new Error(r.status);
+    searchResults = await r.json();
+    setStatus(searchResults.length ? "" : "No places found.", !searchResults.length);
+    $("results").innerHTML = searchResults.map((p, i) => {
+      const parts = p.display_name.split(", ");
+      return `<li data-i="${i}"><span class="name">${esc(parts[0])} <small>${esc(parts.slice(1, 4).join(", "))}</small></span></li>`;
+    }).join("");
+    if (searchResults.length === 1) pickResult(0);
+  } catch (err) {
+    setStatus("Place search failed. Check your internet connection.", true);
+  }
+});
+$("results").addEventListener("click", e => { const li = e.target.closest("li"); if (li) pickResult(+li.dataset.i); });
+/* Outline of a Nominatim result as a list of corners, or null if it has none of a usable size */
+function outlineOf(p) {
+  const g = p.geojson;
+  let ring = null;
+  if (g && g.type === "Polygon") ring = g.coordinates[0];
+  else if (g && g.type === "MultiPolygon") ring = g.coordinates.map(c => c[0]).sort((a, b) => b.length - a.length)[0];
+  if (ring) {
+    let pts = ring.slice(0, -1).map(c => [c[1], c[0]]);            // GeoJSON is [lon, lat]; drop the repeated closing point
+    const step = Math.ceil(pts.length / 40);                        // keep the shape easy to edit
+    if (step > 1) pts = pts.filter((_, k) => k % step === 0);
+    const km2 = pts.length >= 3 ? polyKm2(pts) : 0;
+    if (km2 >= 0.1 && km2 <= 40) return pts;
+  }
+  return null;
+}
+function boxAround(lat, lon, halfKm) {
+  const dLat = halfKm / 111.2, dLon = dLat / Math.cos(lat * Math.PI / 180);
+  return rectPoly([lat - dLat, lon - dLon, lat + dLat, lon + dLon]);
+}
+function pickResult(i) {
+  const p = searchResults[i];
+  // whole municipality, a single point or no outline: use a 3 km box round the centre
+  setNamedPoly(p.display_name.split(", ")[0], outlineOf(p) || boxAround(+p.lat, +p.lon, 1.5));
+}
+
+/* Districts: list the ones in the current map view; picking one uses its real outline as the quiz area */
+let districtList = [];
+function setDStatus(msg, err) { $("dStatus").textContent = msg; $("dStatus").style.color = err ? "var(--bad)" : ""; }
+$("listDistricts").addEventListener("click", async () => {
+  const b = map.getBounds(), bb = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
+  if (bboxKm2(bb) > 3000) return setDStatus("Zoom in a bit first – the map view is too large to list districts.", true);
+  setDStatus("Looking up districts…");
+  $("listDistricts").disabled = true;
+  try {
+    const data = await fetchOverpass(`[out:json][timeout:60];node["place"~"^(suburb|quarter|neighbourhood)$"]["name"](${bb.map(x => x.toFixed(5)).join(",")});out;`);
+    const seen = new Set();
+    districtList = data.elements
+      .map(e => ({ name: (e.tags["name:fi"] || e.tags.name).trim(), lat: e.lat, lon: e.lon, big: e.tags.place === "suburb" }))
+      .filter(d => d.name && !seen.has(d.name) && seen.add(d.name))
+      .sort((x, y) => x.name.localeCompare(y.name, "fi"));
+    $("districts").innerHTML = districtList.map((d, i) => `<li data-i="${i}"><span class="name">${esc(d.name)}</span></li>`).join("");
+    setDStatus(districtList.length ? "" : "No districts found in this map view.", !districtList.length);
+  } catch (err) {
+    setDStatus("Could not load districts. The map server may be busy – try again in a moment.", true);
+  }
+  $("listDistricts").disabled = false;
+});
+$("districts").addEventListener("click", async e => {
+  const li = e.target.closest("li");
+  if (!li) return;
+  const d = districtList[+li.dataset.i];
+  setDStatus("Fetching the outline of " + d.name + "…");
+  let pts = null;
+  try {
+    const vb = [d.lon - 0.08, d.lat + 0.04, d.lon + 0.08, d.lat - 0.04].join(",");
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&accept-language=fi&polygon_geojson=1&polygon_threshold=0.0008&bounded=1&viewbox=" + vb + "&q=" + encodeURIComponent(d.name));
+    if (r.ok) {
+      const outlines = (await r.json()).map(outlineOf).filter(Boolean);
+      pts = outlines.find(o => inPoly([d.lat, d.lon], o)) || null;      // the outline must actually contain the district's centre
+    }
+  } catch (err) {}
+  setNamedPoly(d.name, pts || boxAround(d.lat, d.lon, d.big ? 1 : 0.6));
+  setDStatus(pts ? "" : `No outline is mapped for ${d.name}, so a box around its centre is used. Adjust it as you like.`);
+});
+
+/* ---------- Street data (Overpass), kept in the browser so an area loads instantly next time ---------- */
+const memCache = new Map();
+function idb(modeRW, fn) {
+  return new Promise(resolve => {
+    try {
+      const open = indexedDB.open("katuvisa", 1);
+      open.onupgradeneeded = () => open.result.createObjectStore("areas");
+      open.onerror = () => resolve(undefined);
+      open.onsuccess = () => {
+        try {
+          const req = fn(open.result.transaction("areas", modeRW).objectStore("areas"));
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(undefined);
+        } catch { resolve(undefined); }
+      };
+    } catch { resolve(undefined); }
+  });
+}
+async function fetchOverpass(q) {
+  let lastErr;
+  for (const { url, timeout } of OVERPASS) {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), timeout);
+    try {
+      const r = await fetch(url, { method: "POST", body: new URLSearchParams({ data: q }), signal: ctl.signal });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    } catch (err) { lastErr = err; }
+    finally { clearTimeout(t); }
+  }
+  throw lastErr || new Error("no data");
+}
+/* Geometry: is a point inside the area, and cut a line so that only the parts inside the area remain */
+function inPoly(p, pg) {
+  let c = false;
+  for (let i = 0, j = pg.length - 1; i < pg.length; j = i++) {
+    const a = pg[i], b = pg[j];
+    if ((a[0] > p[0]) !== (b[0] > p[0]) && p[1] < (b[1] - a[1]) * (p[0] - a[0]) / (b[0] - a[0]) + a[1]) c = !c;
+  }
+  return c;
+}
+function clipLine(line, pg) {
+  const out = [];
+  let cur = [];
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1], b = line[i], dx = b[0] - a[0], dy = b[1] - a[1], ts = [0, 1];
+    for (let k = 0, j = pg.length - 1; k < pg.length; j = k++) {
+      const c = pg[j], d = pg[k], ex = d[0] - c[0], ey = d[1] - c[1], den = dx * ey - dy * ex;
+      if (!den) continue;
+      const t = ((c[0] - a[0]) * ey - (c[1] - a[1]) * ex) / den, u = ((c[0] - a[0]) * dy - (c[1] - a[1]) * dx) / den;
+      if (t > 0 && t < 1 && u >= 0 && u <= 1) ts.push(t);
+    }
+    ts.sort((x, y) => x - y);
+    for (let k = 1; k < ts.length; k++) {
+      const t0 = ts[k - 1], t1 = ts[k];
+      if (t1 - t0 < 1e-12) continue;
+      const tm = (t0 + t1) / 2;
+      if (inPoly([a[0] + dx * tm, a[1] + dy * tm], pg)) {
+        if (!cur.length) cur.push([a[0] + dx * t0, a[1] + dy * t0]);
+        cur.push([a[0] + dx * t1, a[1] + dy * t1]);
+      } else if (cur.length) { out.push(cur); cur = []; }
+    }
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+/* Returns { roads: {1: lines, 2: lines, 3: lines}, streets: [{name, rank, lines, length, center}], districts: [{name, pos, major}] } */
+async function loadArea(pg) {
+  const key = "v2|" + polyKey(pg);
+  if (memCache.has(key)) return memCache.get(key);
+  let area = await idb("readonly", st => st.get(key));
+  if (!area) {
+    const bb = polyBbox(pg).map(x => x.toFixed(5)).join(",");
+    const data = await fetchOverpass(`[out:json][timeout:90];(way["highway"~"^(${Object.keys(RANK).join("|")})$"](${bb});` +
+      `node["place"~"^(city|town|village|suburb|quarter|neighbourhood)$"]["name"](${bb}););out tags geom(${bb});`);
+    area = buildArea(data.elements, pg);
+    idb("readwrite", st => st.put(area, key));
+  }
+  memCache.set(key, area);
+  return area;
+}
+function buildArea(elements, pg) {
+  const roads = { 1: [], 2: [], 3: [] };
+  const byName = new Map();
+  const districts = [];
+  for (const el of elements) {
+    const name = ((el.tags && (el.tags["name:fi"] || el.tags.name)) || "").trim();
+    if (el.type === "node") {
+      if (name && el.tags.place && inPoly([el.lat, el.lon], pg))
+        districts.push({ name, pos: [el.lat, el.lon], major: !/^(quarter|neighbourhood)$/.test(el.tags.place) });
+      continue;
+    }
+    const rank = RANK[el.tags.highway];
+    if (!rank || !el.geometry) continue;
+    // the geometry may contain gaps (nulls) outside the downloaded box; then cut every piece at the area edge
+    const raw = [];
+    let line = [];
+    for (const g of el.geometry) {
+      if (g) line.push([g.lat, g.lon]);
+      else { if (line.length > 1) raw.push(line); line = []; }
+    }
+    if (line.length > 1) raw.push(line);
+    const lines = raw.flatMap(l => clipLine(l, pg));
+    if (!lines.length) continue;
+    roads[rank].push(...lines);
+    if (!name) continue;
+    if (!byName.has(name)) byName.set(name, { name, rank, lines: [], length: 0 });
+    const s = byName.get(name);
+    s.rank = Math.min(s.rank, rank);
+    for (const l of lines) {
+      s.lines.push(l);
+      for (let i = 1; i < l.length; i++) s.length += dist(l[i - 1], l[i]);
+    }
+  }
+  const streets = [...byName.values()].filter(s => s.length >= MIN_STREET_M);
+  for (const s of streets) {
+    const pts = s.lines.flat();
+    s.center = [pts.reduce((a, p) => a + p[0], 0) / pts.length, pts.reduce((a, p) => a + p[1], 0) / pts.length];
+  }
+  return { roads, streets, districts };
+}
+
+/* ---------- Quiz ---------- */
+const roadLayer = L.layerGroup().addTo(map);
+const doneLayer = L.layerGroup().addTo(map);
+const hlLayer = L.layerGroup().addTo(map);
+const districtLayer = L.layerGroup().addTo(map);
+const labelLayer = L.layerGroup().addTo(map);
+const updateZoomClass = () => { $("map").classList.toggle("far", map.getZoom() < 15); $("map").classList.toggle("vfar", map.getZoom() < 13); };
+map.on("zoomend", updateZoomClass);
+function textLabel(pos, text, cls, angle) {
+  return L.marker(pos, { interactive: false, keyboard: false, zIndexOffset: cls.startsWith("street") ? 200 : 300,
+    icon: L.divIcon({ className: "maplabel " + cls, iconSize: [0, 0], html: `<span style="transform:translate(-50%,-50%) rotate(${angle || 0}deg)">${esc(text)}</span>` }) });
+}
+/* Name written along the street, at the point of the street closest to its middle */
+function labelStreet(s) {
+  let best = s.lines[0][0], bd = Infinity, ang = 0;
+  for (const l of s.lines) for (let i = 0; i < l.length; i++) {
+    const d = dist(l[i], s.center);
+    if (d < bd) {
+      bd = d; best = l[i];
+      const a = map.project(l[Math.max(0, i - 1)], 18), b = map.project(l[Math.min(l.length - 1, i + 1)], 18);
+      ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    }
+  }
+  if (ang > 90) ang -= 180; else if (ang < -90) ang += 180;
+  textLabel(best, s.name, "street", ang).addTo(labelLayer);
+}
+let Q = null;   // quiz state
+
+$("start").addEventListener("click", startQuiz);
+async function startQuiz() {
+  if (polyKm2(poly) > MAX_AREA_KM2 || bboxKm2(polyBbox(poly)) > 3 * MAX_AREA_KM2) return setStatus(`That area is too large (max ${MAX_AREA_KM2} km²). Make it smaller.`, true);
+  $("start").disabled = true;
+  setStatus("Loading streets from OpenStreetMap… the first time for an area this can take up to a minute.");
+  let area;
+  try { area = await loadArea(poly); }
+  catch (err) { $("start").disabled = false; return setStatus("Could not load street data. The map server may be busy – try again in a moment.", true); }
+  $("start").disabled = false;
+  const lvl = level(), streets = area.streets.filter(s => s.rank <= lvl);
+  if (!streets.length) return setStatus("No named streets of that kind in this area. Try a larger area or more street types.", true);
+
+  Q = {
+    streets, queue: shuffle(streets.slice()), idx: -1, mode: mode(), key: scoreKey(),
+    area: currentAreaName(), levelLabel: LEVELS[lvl],
+    points: 0, first: 0, second: 0, missed: [], attempt: 0, locked: false, timer: null,
+  };
+  setStatus("");
+  doneLayer.clearLayers(); hlLayer.clearLayers(); roadLayer.clearLayers(); labelLayer.clearLayers(); districtLayer.clearLayers();
+  for (const d of area.districts || []) textLabel(d.pos, d.name, "district " + (d.major ? "major" : "minor")).addTo(districtLayer);
+  updateZoomClass();
+  // unlabelled road network over the aerial photo
+  L.polyline(area.roads[3], { color: "#ffffff", weight: 2.5, opacity: 0.85, interactive: false }).addTo(roadLayer);
+  L.polyline(area.roads[2], { color: "#ffffff", weight: 4, opacity: 0.95, interactive: false }).addTo(roadLayer);
+  L.polyline(area.roads[1], { color: "#ffe9a8", weight: 5.5, opacity: 1, interactive: false }).addTo(roadLayer);
+  showBox(false); setLabels(false);
+  show("quiz");
+  $("quizTitle").textContent = Q.area;
+  $("typeForm").classList.toggle("hidden", Q.mode !== "type");
+  $("choices").classList.toggle("hidden", Q.mode !== "choice");
+  nextStreet();
+}
+
+function show(id) {
+  for (const s of ["setup", "quiz", "result"]) $(s).classList.toggle("hidden", s !== id);
+  $("panel").scrollTop = 0;
+  setTimeout(() => map.invalidateSize(), 0);
+}
+
+function updateStats() {
+  const done = Q.idx;
+  $("sScore").textContent = fmt(Q.points);
+  $("sDone").textContent = done;
+  $("sLeft").textContent = Q.queue.length - done;
+  $("progress").style.width = (100 * done / Q.queue.length) + "%";
+}
+
+function drawStreet(s, layer, style) {
+  return L.polyline(s.lines, style).addTo(layer);
+}
+function focusStreet() {
+  const s = Q.queue[Q.idx];
+  map.flyToBounds(L.latLngBounds(s.lines.flat()), { padding: [90, 90], maxZoom: 16, duration: 0.6 });
+}
+
+function nextStreet() {
+  clearTimeout(Q.timer);
+  Q.idx++;
+  if (Q.idx >= Q.queue.length) return finish();
+  Q.attempt = 0; Q.locked = false;
+  const s = Q.queue[Q.idx];
+  updateStats();
+  hlLayer.clearLayers();
+  drawStreet(s, hlLayer, { color: "#1f2933", weight: 12, opacity: 0.9, interactive: false });
+  drawStreet(s, hlLayer, { color: "#ff2e9a", weight: 7, opacity: 1, interactive: false });
+  focusStreet();
+
+  $("feedback").className = "hidden";
+  $("next").classList.add("hidden");
+  $("skip").classList.remove("hidden");
+  if (Q.mode === "type") {
+    $("answer").value = ""; $("answer").disabled = false; $("answer").focus();
+  } else {
+    // distractors: random picks among the nearest other streets
+    const near = Q.streets.filter(o => o !== s).sort((a, b) => dist(a.center, s.center) - dist(b.center, s.center)).slice(0, 12);
+    Q.options = shuffle([s, ...shuffle(near).slice(0, 3)]);
+    $("choices").innerHTML = Q.options.map((o, i) => `<button type="button" data-i="${i}"><kbd>${i + 1}</kbd>${esc(o.name)}</button>`).join("");
+  }
+}
+
+function feedback(cls, html) { $("feedback").className = cls; $("feedback").innerHTML = html; }
+
+/* Decide whether a typed answer is right: exact, or a small typo that isn't another street's name */
+function judge(text, s) {
+  const a = norm(text), t = norm(s.name);
+  if (!a) return null;
+  if (a === t) return "exact";
+  if (Q.streets.some(o => o !== s && norm(o.name) === a)) return "wrong";
+  const allowed = t.length < 5 ? 0 : t.length < 10 ? 1 : 2;
+  return lev(a, t) <= allowed ? "close" : "wrong";
+}
+
+function answered(correct, note) {
+  const s = Q.queue[Q.idx];
+  if (Q.locked) return;
+  if (correct) {
+    const pts = Q.attempt === 0 ? 1 : 0.5;
+    Q.points += pts; Q.attempt === 0 ? Q.first++ : Q.second++;
+    settle(s, Q.attempt === 0 ? "good" : "mid",
+      `${Q.attempt === 0 ? "Correct!" : "Correct on the second try (½ point)."} <b>${esc(s.name)}</b>${note ? `<br><span class="muted">${note}</span>` : ""}`);
+    Q.timer = setTimeout(nextStreet, note ? 2200 : 1100);
+  } else if (Q.attempt === 0) {
+    Q.attempt = 1;
+    if (Q.mode === "type") {
+      const pattern = s.name.replace(/[^\s\-]/g, (c, i) => i === 0 ? c : "_");
+      feedback("mid", `Not quite – one more try. Hint:<br><span class="hint">${esc(pattern)}</span>`);
+      $("answer").select();
+    } else {
+      feedback("mid", "Not quite – one more try. One wrong option has been removed.");
+    }
+  } else {
+    reveal(s, "Wrong again.");
+  }
+}
+function reveal(s, lead) {
+  Q.missed.push(s);
+  settle(s, "bad", `${lead} The street is <b>${esc(s.name)}</b>`);
+}
+function settle(s, cls, html) {
+  Q.locked = true;
+  feedback(cls, html);
+  const color = { good: "#3fbf5a", mid: "#ffab1a", bad: "#ff4d3d" }[cls];
+  hlLayer.clearLayers();
+  drawStreet(s, doneLayer, { color, weight: 5, opacity: 0.9 }).bindTooltip(s.name, { sticky: true });
+  if (cls !== "bad") labelStreet(s);          // correctly guessed streets keep their name on the map
+  $("answer").disabled = true;
+  $("choices").querySelectorAll("button").forEach((b, i) => { b.disabled = true; if (Q.options && Q.options[i] === s) b.classList.add("right"); });
+  $("skip").classList.add("hidden");
+  $("next").classList.remove("hidden");
+  $("next").focus();
+  Q.idx++; updateStats(); Q.idx--;
+}
+
+$("typeForm").addEventListener("submit", e => {
+  e.preventDefault();
+  if (!Q || Q.locked) return;
+  const s = Q.queue[Q.idx], verdict = judge($("answer").value, s);
+  if (!verdict) return;
+  answered(verdict !== "wrong", verdict === "close" ? "Accepted with a small spelling slip – check the exact spelling above." : "");
+});
+$("choices").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn || btn.disabled || !Q || Q.locked) return;
+  const s = Q.queue[Q.idx], o = Q.options[+btn.dataset.i];
+  if (o === s) return answered(true);
+  btn.classList.add("wrong"); btn.disabled = true;
+  if (Q.attempt === 0) {   // remove one more wrong option as the hint
+    const others = [...$("choices").querySelectorAll("button")].filter(b => !b.disabled && Q.options[+b.dataset.i] !== s);
+    if (others.length > 1) { const x = others[Math.floor(Math.random() * others.length)]; x.disabled = true; x.classList.add("wrong"); }
+  }
+  answered(false);
+});
+$("skip").addEventListener("click", () => { if (Q && !Q.locked) reveal(Q.queue[Q.idx], "No problem."); });
+$("next").addEventListener("click", nextStreet);
+$("recenter").addEventListener("click", () => { if (Q) focusStreet(); });
+$("quit").addEventListener("click", () => {
+  if (!Q) return;
+  if (Q.idx + (Q.locked ? 1 : 0) === 0 || confirm("End this round now? Your score so far is shown, but it won't count as a best score.")) finish(true);
+});
+document.addEventListener("keydown", e => {
+  if (!Q || $("quiz").classList.contains("hidden")) return;
+  if (Q.locked && e.key === "Enter") { e.preventDefault(); nextStreet(); }
+  else if (!Q.locked && Q.mode === "choice" && /^[1-4]$/.test(e.key)) {
+    const b = $("choices").querySelector(`button[data-i="${+e.key - 1}"]`);
+    if (b) b.click();
+  }
+});
+
+/* ---------- Result ---------- */
+function finish(early) {
+  clearTimeout(Q.timer);
+  hlLayer.clearLayers();
+  const asked = Q.first + Q.second + Q.missed.length;
+  const pct = asked ? Math.round(100 * Q.points / asked) : 0;
+  $("resArea").textContent = `${Q.area} · ${Q.levelLabel} · ${Q.mode === "type" ? "typing" : "multiple choice"} · ${asked} of ${Q.queue.length} streets`;
+  $("rPct").textContent = pct + "%";
+  $("rFirst").textContent = Q.first; $("rSecond").textContent = Q.second; $("rMiss").textContent = Q.missed.length;
+  const best = store.get("best", {}), old = best[Q.key];
+  if (early) $("rBest").textContent = old != null ? `Round ended early. Your best here is ${old}%.` : "Round ended early.";
+  else if (old == null || pct > old) { best[Q.key] = pct; store.set("best", best); $("rBest").textContent = old == null ? "First completed round here – that's your score to beat." : `New best! Previous best was ${old}%.`; }
+  else $("rBest").textContent = `Your best here is ${old}%.`;
+  $("missedWrap").classList.toggle("hidden", !Q.missed.length);
+  $("missed").innerHTML = Q.missed.map(s => `<li><span class="name">${esc(s.name)}</span></li>`).join("");
+  show("result");
+  map.flyToBounds(shape.getBounds(), { padding: [30, 30], duration: 0.6 });
+}
+$("again").addEventListener("click", startQuiz);
+$("newArea").addEventListener("click", () => {
+  Q = null;
+  doneLayer.clearLayers(); hlLayer.clearLayers(); roadLayer.clearLayers(); labelLayer.clearLayers(); districtLayer.clearLayers();
+  showBox(true); setLabels(true);
+  show("setup"); refreshSetup();
+});
+
+/* ---------- Go ---------- */
+setPoly(poly, true);
+</script>
+</body>
+</html>
